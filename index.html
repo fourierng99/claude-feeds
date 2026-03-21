@@ -1,0 +1,1959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Claude Feeds &mdash; RSS Reader</title>
+  <style>
+    /* =====================================================
+       CSS RESET & CUSTOM PROPERTIES
+    ===================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      /* Light theme */
+      --sidebar-bg: #0f1e3c;
+      --sidebar-hover: #1a2f56;
+      --sidebar-active: #1d4ed8;
+      --sidebar-text: #c8d6f0;
+      --sidebar-text-muted: #7a95c2;
+      --sidebar-border: rgba(255,255,255,0.06);
+      --sidebar-logo-color: #60a5fa;
+
+      --content-bg: #f0f4fa;
+      --topbar-bg: #ffffff;
+      --topbar-border: #e2e8f0;
+      --topbar-shadow: 0 1px 3px rgba(0,0,0,0.08);
+
+      --card-bg: #ffffff;
+      --card-border: #e8edf5;
+      --card-shadow: 0 2px 8px rgba(15,30,60,0.07);
+      --card-shadow-hover: 0 8px 24px rgba(15,30,60,0.13);
+
+      --text-primary: #0f1e3c;
+      --text-secondary: #4a5568;
+      --text-muted: #718096;
+      --text-link: #1d4ed8;
+      --text-link-hover: #1e40af;
+
+      --tag-bg: #dbeafe;
+      --tag-text: #1d4ed8;
+
+      --badge-bg: #1d4ed8;
+      --badge-text: #ffffff;
+
+      --input-bg: #f8fafc;
+      --input-border: #cbd5e0;
+      --input-border-focus: #1d4ed8;
+      --input-text: #0f1e3c;
+      --input-placeholder: #a0aec0;
+
+      --divider: #e2e8f0;
+      --accent: #1d4ed8;
+      --accent-light: #dbeafe;
+
+      --spinner-color: #1d4ed8;
+      --error-bg: #fff5f5;
+      --error-border: #fed7d7;
+      --error-text: #c53030;
+      --error-icon: #fc8181;
+
+      --empty-text: #a0aec0;
+
+      --toggle-bg: #e2e8f0;
+      --toggle-knob: #ffffff;
+      --toggle-active-bg: #1d4ed8;
+
+      --scrollbar-track: #e2e8f0;
+      --scrollbar-thumb: #a0aec0;
+      --scrollbar-thumb-hover: #718096;
+
+      --font-sans: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+      --font-serif: Georgia, 'Times New Roman', serif;
+
+      --sidebar-width: 270px;
+      --topbar-height: 64px;
+      --border-radius: 12px;
+      --border-radius-sm: 8px;
+      --transition: 0.18s ease;
+    }
+
+    [data-theme="dark"] {
+      --sidebar-bg: #070e1f;
+      --sidebar-hover: #0f1c35;
+      --sidebar-active: #1a3a7a;
+      --sidebar-text: #b0c4e8;
+      --sidebar-text-muted: #5a7ab0;
+      --sidebar-border: rgba(255,255,255,0.04);
+      --sidebar-logo-color: #60a5fa;
+
+      --content-bg: #0d1626;
+      --topbar-bg: #111d35;
+      --topbar-border: #1e2d4a;
+      --topbar-shadow: 0 1px 3px rgba(0,0,0,0.3);
+
+      --card-bg: #111d35;
+      --card-border: #1e2d4a;
+      --card-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      --card-shadow-hover: 0 8px 24px rgba(0,0,0,0.5);
+
+      --text-primary: #e2ecff;
+      --text-secondary: #8fa8d0;
+      --text-muted: #5a7ab0;
+      --text-link: #60a5fa;
+      --text-link-hover: #93c5fd;
+
+      --tag-bg: #1a3a7a;
+      --tag-text: #93c5fd;
+
+      --badge-bg: #1a3a7a;
+      --badge-text: #93c5fd;
+
+      --input-bg: #0d1626;
+      --input-border: #1e2d4a;
+      --input-border-focus: #3b82f6;
+      --input-text: #e2ecff;
+      --input-placeholder: #3a5a8a;
+
+      --divider: #1e2d4a;
+      --accent: #3b82f6;
+      --accent-light: #1a3a7a;
+
+      --spinner-color: #3b82f6;
+      --error-bg: #1a0a0a;
+      --error-border: #5c2020;
+      --error-text: #fc8181;
+      --error-icon: #fc8181;
+
+      --empty-text: #3a5a8a;
+
+      --toggle-bg: #1e2d4a;
+      --toggle-knob: #3b82f6;
+      --toggle-active-bg: #3b82f6;
+
+      --scrollbar-track: #0d1626;
+      --scrollbar-thumb: #1e2d4a;
+      --scrollbar-thumb-hover: #2a3d5a;
+    }
+
+    /* =====================================================
+       BASE
+    ===================================================== */
+    html {
+      font-size: 16px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--content-bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+    ::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+      border-radius: 99px;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+
+    /* =====================================================
+       SIDEBAR
+    ===================================================== */
+    #sidebar {
+      width: var(--sidebar-width);
+      min-height: 100vh;
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      z-index: 100;
+      transition: transform var(--transition), background var(--transition);
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 22px 20px 16px;
+      border-bottom: 1px solid var(--sidebar-border);
+      flex-shrink: 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--sidebar-active);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .logo-icon svg {
+      width: 20px;
+      height: 20px;
+      fill: #ffffff;
+    }
+
+    .logo-text {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-tagline {
+      font-size: 0.68rem;
+      color: var(--sidebar-text-muted);
+      margin-top: 1px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .sidebar-section-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--sidebar-text-muted);
+      padding: 16px 20px 6px;
+    }
+
+    .sources-list {
+      list-style: none;
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 12px;
+    }
+
+    .source-item {
+      padding: 0 10px;
+      margin: 1px 0;
+    }
+
+    .source-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 9px 12px;
+      border: none;
+      background: transparent;
+      color: var(--sidebar-text);
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: var(--border-radius-sm);
+      transition: background var(--transition), color var(--transition);
+      text-align: left;
+      position: relative;
+    }
+
+    .source-btn:hover {
+      background: var(--sidebar-hover);
+      color: #ffffff;
+    }
+
+    .source-btn.active {
+      background: var(--sidebar-active);
+      color: #ffffff;
+    }
+
+    .source-btn.active .source-icon {
+      opacity: 1;
+    }
+
+    .source-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+      opacity: 0.85;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .source-name {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .source-category {
+      font-size: 0.65rem;
+      color: var(--sidebar-text-muted);
+      opacity: 0.7;
+    }
+
+    .source-btn.active .source-category {
+      color: rgba(255,255,255,0.65);
+    }
+
+    .source-btn.loading-source::after {
+      content: '';
+      width: 10px;
+      height: 10px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      flex-shrink: 0;
+    }
+
+    .sidebar-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--sidebar-border);
+      flex-shrink: 0;
+    }
+
+    .theme-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .theme-label {
+      font-size: 0.8rem;
+      color: var(--sidebar-text-muted);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .theme-toggle {
+      width: 40px;
+      height: 22px;
+      background: var(--toggle-bg);
+      border-radius: 99px;
+      position: relative;
+      cursor: pointer;
+      border: none;
+      transition: background var(--transition);
+      flex-shrink: 0;
+    }
+
+    .theme-toggle.dark {
+      background: var(--toggle-active-bg);
+    }
+
+    .theme-toggle::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: var(--toggle-knob);
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: transform var(--transition), background var(--transition);
+    }
+
+    .theme-toggle.dark::after {
+      transform: translateX(18px);
+      background: #ffffff;
+    }
+
+    /* Sidebar overlay for mobile */
+    #sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 99;
+      backdrop-filter: blur(2px);
+    }
+
+    /* =====================================================
+       MAIN CONTENT
+    ===================================================== */
+    #main {
+      margin-left: var(--sidebar-width);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      transition: margin-left var(--transition);
+    }
+
+    /* =====================================================
+       TOPBAR
+    ===================================================== */
+    #topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: var(--topbar-bg);
+      border-bottom: 1px solid var(--topbar-border);
+      box-shadow: var(--topbar-shadow);
+      height: var(--topbar-height);
+      display: flex;
+      align-items: center;
+      padding: 0 28px;
+      gap: 16px;
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    #menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      transition: background var(--transition);
+    }
+
+    #menu-toggle:hover {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+
+    #menu-toggle svg {
+      display: block;
+    }
+
+    .topbar-title {
+      flex: 1;
+    }
+
+    .topbar-source-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .topbar-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    #article-count {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .search-wrapper {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--input-placeholder);
+      pointer-events: none;
+    }
+
+    #search-input {
+      background: var(--input-bg);
+      border: 1.5px solid var(--input-border);
+      border-radius: 99px;
+      padding: 8px 16px 8px 36px;
+      font-size: 0.875rem;
+      font-family: var(--font-sans);
+      color: var(--input-text);
+      outline: none;
+      width: 240px;
+      transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
+    }
+
+    #search-input::placeholder {
+      color: var(--input-placeholder);
+    }
+
+    #search-input:focus {
+      border-color: var(--input-border-focus);
+      box-shadow: 0 0 0 3px rgba(29,78,216,0.12);
+    }
+
+    #clear-search {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--input-placeholder);
+      padding: 2px;
+      display: none;
+      border-radius: 50%;
+      transition: color var(--transition), background var(--transition);
+    }
+
+    #clear-search:hover {
+      color: var(--text-secondary);
+      background: var(--accent-light);
+    }
+
+    #clear-search.visible {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* =====================================================
+       FEED CONTENT
+    ===================================================== */
+    #feed-container {
+      flex: 1;
+      padding: 28px;
+      max-width: 1100px;
+      width: 100%;
+    }
+
+    /* =====================================================
+       LOADING STATE
+    ===================================================== */
+    #loading-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px;
+      gap: 16px;
+    }
+
+    #loading-state.visible {
+      display: flex;
+    }
+
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3.5px solid var(--divider);
+      border-top-color: var(--spinner-color);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+
+    .loading-text {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Skeleton cards */
+    .skeleton-grid {
+      display: none;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .skeleton-grid.visible {
+      display: grid;
+    }
+
+    .skeleton-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      padding: 22px;
+      animation: shimmer 1.5s infinite;
+    }
+
+    .skeleton-line {
+      background: var(--divider);
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+
+    .sk-tag { height: 18px; width: 70px; border-radius: 99px; margin-bottom: 14px; }
+    .sk-title-1 { height: 16px; width: 100%; }
+    .sk-title-2 { height: 16px; width: 80%; }
+    .sk-body-1 { height: 13px; width: 100%; margin-top: 14px; }
+    .sk-body-2 { height: 13px; width: 95%; }
+    .sk-body-3 { height: 13px; width: 75%; }
+    .sk-footer { height: 13px; width: 50%; margin-top: 20px; }
+
+    @keyframes shimmer {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.55; }
+    }
+
+    /* =====================================================
+       ERROR STATE
+    ===================================================== */
+    #error-state {
+      display: none;
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      border-radius: var(--border-radius);
+      padding: 28px 32px;
+      margin: 8px 0;
+    }
+
+    #error-state.visible {
+      display: block;
+    }
+
+    .error-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .error-icon {
+      color: var(--error-icon);
+      flex-shrink: 0;
+    }
+
+    .error-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--error-text);
+    }
+
+    .error-message {
+      font-size: 0.875rem;
+      color: var(--error-text);
+      opacity: 0.85;
+      line-height: 1.6;
+      margin-left: 36px;
+    }
+
+    .retry-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 14px;
+      margin-left: 36px;
+      padding: 8px 18px;
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      border-radius: 99px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity var(--transition), transform var(--transition);
+    }
+
+    .retry-btn:hover {
+      opacity: 0.88;
+      transform: translateY(-1px);
+    }
+
+    /* =====================================================
+       EMPTY STATE
+    ===================================================== */
+    #empty-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px;
+      gap: 12px;
+      text-align: center;
+    }
+
+    #empty-state.visible {
+      display: flex;
+    }
+
+    .empty-icon {
+      color: var(--empty-text);
+      opacity: 0.5;
+    }
+
+    .empty-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .empty-subtitle {
+      font-size: 0.875rem;
+      color: var(--empty-text);
+      max-width: 300px;
+      line-height: 1.6;
+    }
+
+    /* =====================================================
+       ARTICLES GRID
+    ===================================================== */
+    #articles-grid {
+      display: none;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    #articles-grid.visible {
+      display: grid;
+    }
+
+    /* =====================================================
+       ARTICLE CARD
+    ===================================================== */
+    .article-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: box-shadow var(--transition), transform var(--transition), border-color var(--transition);
+      animation: fadeInUp 0.35s ease both;
+    }
+
+    .article-card:hover {
+      box-shadow: var(--card-shadow-hover);
+      transform: translateY(-3px);
+      border-color: var(--accent);
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .card-image {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      display: block;
+      background: var(--divider);
+    }
+
+    .card-body {
+      padding: 18px 20px 14px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .source-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      background: var(--tag-bg);
+      color: var(--tag-text);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border-radius: 99px;
+    }
+
+    .card-date {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .card-title {
+      font-size: 0.975rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.45;
+      margin-bottom: 10px;
+      font-family: var(--font-sans);
+      letter-spacing: -0.01em;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-description {
+      font-size: 0.845rem;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-footer {
+      padding: 12px 20px 16px;
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .read-more-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--text-link);
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color var(--transition), gap var(--transition);
+    }
+
+    .read-more-link:hover {
+      color: var(--text-link-hover);
+      gap: 8px;
+    }
+
+    .read-more-link svg {
+      transition: transform var(--transition);
+    }
+
+    .read-more-link:hover svg {
+      transform: translateX(2px);
+    }
+
+    /* Staggered animation delay for cards */
+    .article-card:nth-child(1)  { animation-delay: 0.00s; }
+    .article-card:nth-child(2)  { animation-delay: 0.04s; }
+    .article-card:nth-child(3)  { animation-delay: 0.08s; }
+    .article-card:nth-child(4)  { animation-delay: 0.12s; }
+    .article-card:nth-child(5)  { animation-delay: 0.16s; }
+    .article-card:nth-child(6)  { animation-delay: 0.20s; }
+    .article-card:nth-child(7)  { animation-delay: 0.24s; }
+    .article-card:nth-child(8)  { animation-delay: 0.28s; }
+    .article-card:nth-child(9)  { animation-delay: 0.32s; }
+    .article-card:nth-child(10) { animation-delay: 0.36s; }
+    .article-card:nth-child(n+11) { animation-delay: 0.40s; }
+
+    /* =====================================================
+       SEARCH HIGHLIGHT
+    ===================================================== */
+    mark.highlight {
+      background: rgba(253, 224, 71, 0.55);
+      color: inherit;
+      border-radius: 2px;
+      padding: 0 1px;
+    }
+
+    [data-theme="dark"] mark.highlight {
+      background: rgba(253, 224, 71, 0.25);
+    }
+
+    /* =====================================================
+       REFRESH BUTTON (topbar)
+    ===================================================== */
+    #refresh-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent-light);
+      color: var(--accent);
+      cursor: pointer;
+      transition: background var(--transition), transform var(--transition);
+      flex-shrink: 0;
+    }
+
+    #refresh-btn:hover {
+      background: var(--accent);
+      color: #ffffff;
+    }
+
+    #refresh-btn.spinning svg {
+      animation: spin 0.75s linear infinite;
+    }
+
+    /* =====================================================
+       BACK TO TOP
+    ===================================================== */
+    #back-to-top {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      opacity: 0;
+      transform: translateY(16px);
+      pointer-events: none;
+      transition: opacity var(--transition), transform var(--transition);
+      z-index: 200;
+    }
+
+    #back-to-top.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    #back-to-top:hover {
+      opacity: 0.88;
+    }
+
+    /* =====================================================
+       RESPONSIVE
+    ===================================================== */
+    @media (max-width: 768px) {
+      :root {
+        --sidebar-width: 270px;
+      }
+
+      #sidebar {
+        transform: translateX(-100%);
+        box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+      }
+
+      #sidebar.open {
+        transform: translateX(0);
+      }
+
+      #sidebar-overlay.visible {
+        display: block;
+      }
+
+      #main {
+        margin-left: 0;
+      }
+
+      #menu-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #topbar {
+        padding: 0 16px;
+        gap: 10px;
+      }
+
+      #search-input {
+        width: 160px;
+        font-size: 0.82rem;
+      }
+
+      #feed-container {
+        padding: 16px;
+      }
+
+      #articles-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .skeleton-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .topbar-source-name {
+        font-size: 0.95rem;
+      }
+
+      #search-input {
+        width: 130px;
+      }
+
+      #back-to-top {
+        bottom: 16px;
+        right: 16px;
+      }
+    }
+
+    /* =====================================================
+       PRINT
+    ===================================================== */
+    @media print {
+      #sidebar, #topbar, #back-to-top { display: none; }
+      #main { margin-left: 0; }
+      .article-card { break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside id="sidebar" role="navigation" aria-label="News sources">
+    <div class="sidebar-header">
+      <a class="logo" href="#" onclick="return false;" aria-label="Claude Feeds home">
+        <div class="logo-icon">
+          <!-- RSS icon -->
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="5" cy="19" r="2.5"/>
+            <path d="M4 4a16 16 0 0 1 16 16" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <path d="M4 11a9 9 0 0 1 9 9" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          </svg>
+        </div>
+        <div>
+          <div class="logo-text">Claude Feeds</div>
+          <div class="logo-tagline">RSS Reader</div>
+        </div>
+      </a>
+    </div>
+
+    <div class="sidebar-section-label">News Sources</div>
+    <ul class="sources-list" id="sources-list" role="list">
+      <!-- Populated by JS -->
+    </ul>
+
+    <div class="sidebar-footer">
+      <div class="theme-toggle-row">
+        <span class="theme-label">
+          <!-- Moon icon -->
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+          Dark Mode
+        </span>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" role="switch" aria-checked="false"></button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Sidebar overlay (mobile) -->
+  <div id="sidebar-overlay" aria-hidden="true"></div>
+
+  <!-- ===== MAIN ===== -->
+  <main id="main">
+    <!-- Top Bar -->
+    <header id="topbar">
+      <button id="menu-toggle" aria-label="Toggle sidebar" aria-expanded="false">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="6"  x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+      <div class="topbar-title">
+        <div class="topbar-source-name" id="topbar-source-name">Loading…</div>
+        <div class="topbar-meta">
+          <span id="article-count"></span>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="search-wrapper">
+        <span class="search-icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </span>
+        <input
+          type="search"
+          id="search-input"
+          placeholder="Filter articles…"
+          autocomplete="off"
+          aria-label="Search articles"
+        />
+        <button id="clear-search" aria-label="Clear search">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Refresh -->
+      <button id="refresh-btn" aria-label="Refresh feed" title="Refresh feed">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Feed Container -->
+    <div id="feed-container">
+
+      <!-- Skeleton (loading placeholder) -->
+      <div class="skeleton-grid" id="skeleton-grid" aria-hidden="true">
+        <!-- 6 skeleton cards -->
+        <div class="skeleton-card">
+          <div class="skeleton-line sk-tag"></div>
+          <div class="skeleton-line sk-title-1"></div>
+          <div class="skeleton-line sk-title-2"></div>
+          <div class="skeleton-line sk-body-1"></div>
+          <div class="skeleton-line sk-body-2"></div>
+          <div class="skeleton-line sk-body-3"></div>
+          <div class="skeleton-line sk-footer"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-line sk-tag"></div>
+          <div class="skeleton-line sk-title-1"></div>
+          <div class="skeleton-line sk-title-2" style="width:70%"></div>
+          <div class="skeleton-line sk-body-1"></div>
+          <div class="skeleton-line sk-body-2" style="width:88%"></div>
+          <div class="skeleton-line sk-body-3" style="width:60%"></div>
+          <div class="skeleton-line sk-footer" style="width:40%"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-line sk-tag"></div>
+          <div class="skeleton-line sk-title-1" style="width:92%"></div>
+          <div class="skeleton-line sk-title-2" style="width:75%"></div>
+          <div class="skeleton-line sk-body-1"></div>
+          <div class="skeleton-line sk-body-2"></div>
+          <div class="skeleton-line sk-body-3" style="width:80%"></div>
+          <div class="skeleton-line sk-footer" style="width:55%"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-line sk-tag"></div>
+          <div class="skeleton-line sk-title-1" style="width:85%"></div>
+          <div class="skeleton-line sk-title-2"></div>
+          <div class="skeleton-line sk-body-1" style="width:97%"></div>
+          <div class="skeleton-line sk-body-2" style="width:90%"></div>
+          <div class="skeleton-line sk-body-3"></div>
+          <div class="skeleton-line sk-footer"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-line sk-tag"></div>
+          <div class="skeleton-line sk-title-1"></div>
+          <div class="skeleton-line sk-title-2" style="width:65%"></div>
+          <div class="skeleton-line sk-body-1" style="width:93%"></div>
+          <div class="skeleton-line sk-body-2"></div>
+          <div class="skeleton-line sk-body-3" style="width:70%"></div>
+          <div class="skeleton-line sk-footer" style="width:45%"></div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-line sk-tag"></div>
+          <div class="skeleton-line sk-title-1" style="width:78%"></div>
+          <div class="skeleton-line sk-title-2" style="width:88%"></div>
+          <div class="skeleton-line sk-body-1"></div>
+          <div class="skeleton-line sk-body-2" style="width:82%"></div>
+          <div class="skeleton-line sk-body-3" style="width:65%"></div>
+          <div class="skeleton-line sk-footer" style="width:48%"></div>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div id="error-state" role="alert" aria-live="assertive">
+        <div class="error-header">
+          <span class="error-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </span>
+          <div class="error-title">Failed to load feed</div>
+        </div>
+        <p class="error-message" id="error-message">An unexpected error occurred.</p>
+        <button class="retry-btn" id="retry-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+          Try again
+        </button>
+      </div>
+
+      <!-- Empty / No results -->
+      <div id="empty-state" role="status" aria-live="polite">
+        <span class="empty-icon" aria-hidden="true">
+          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            <line x1="8" y1="11" x2="14" y2="11"/>
+          </svg>
+        </span>
+        <div class="empty-title" id="empty-title">No articles found</div>
+        <p class="empty-subtitle" id="empty-subtitle">Try a different search term.</p>
+      </div>
+
+      <!-- Articles Grid -->
+      <div id="articles-grid" role="list" aria-label="Articles"></div>
+    </div>
+  </main>
+
+  <!-- Back to top -->
+  <button id="back-to-top" aria-label="Back to top">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="18 15 12 9 6 15"/>
+    </svg>
+  </button>
+
+  <!-- ===== JAVASCRIPT ===== -->
+  <script>
+    'use strict';
+
+    /* --------------------------------------------------
+       CONFIG: News Sources
+    -------------------------------------------------- */
+    const SOURCES = [
+      {
+        id: 'bbc',
+        name: 'BBC News',
+        category: 'World',
+        url: 'https://feeds.bbci.co.uk/news/rss.xml',
+        iconBg: '#bb1919',
+        iconText: 'BBC',
+      },
+      {
+        id: 'reuters',
+        name: 'Reuters',
+        category: 'World',
+        url: 'https://feeds.reuters.com/reuters/topNews',
+        iconBg: '#ff6200',
+        iconText: 'R',
+      },
+      {
+        id: 'guardian',
+        name: 'The Guardian',
+        category: 'World',
+        url: 'https://www.theguardian.com/world/rss',
+        iconBg: '#052962',
+        iconText: 'GRD',
+      },
+      {
+        id: 'aljazeera',
+        name: 'Al Jazeera',
+        category: 'World',
+        url: 'https://www.aljazeera.com/xml/rss/all.xml',
+        iconBg: '#8b0000',
+        iconText: 'AJ',
+      },
+      {
+        id: 'techcrunch',
+        name: 'TechCrunch',
+        category: 'Tech',
+        url: 'https://techcrunch.com/feed/',
+        iconBg: '#0d9f00',
+        iconText: 'TC',
+      },
+      {
+        id: 'hackernews',
+        name: 'Hacker News',
+        category: 'Tech',
+        url: 'https://hnrss.org/frontpage',
+        iconBg: '#ff6600',
+        iconText: 'HN',
+      },
+      {
+        id: 'nasa',
+        name: 'NASA',
+        category: 'Science',
+        url: 'https://www.nasa.gov/rss/dyn/breaking_news.rss',
+        iconBg: '#0b3d91',
+        iconText: 'NASA',
+      },
+      {
+        id: 'npr',
+        name: 'NPR News',
+        category: 'News',
+        url: 'https://feeds.npr.org/1001/rss.xml',
+        iconBg: '#3d6b9c',
+        iconText: 'NPR',
+      },
+      {
+        id: 'nhk',
+        name: 'NHK World',
+        category: 'Japan',
+        url: 'https://www3.nhk.or.jp/rss/news/cat0.xml',
+        iconBg: '#003087',
+        iconText: 'NHK',
+      },
+      {
+        id: 'japantimes',
+        name: 'The Japan Times',
+        category: 'Japan',
+        url: 'https://www.japantimes.co.jp/feed/',
+        iconBg: '#c8102e',
+        iconText: 'JT',
+      },
+      {
+        id: 'vnexpress',
+        name: 'VnExpress',
+        category: 'Vietnam',
+        url: 'https://vnexpress.net/rss/tin-moi-nhat.rss',
+        iconBg: '#da251d',
+        iconText: 'VNE',
+      },
+      {
+        id: 'tuoitre',
+        name: 'Tuổi Trẻ',
+        category: 'Vietnam',
+        url: 'https://tuoitre.vn/rss/tin-moi-nhat.rss',
+        iconBg: '#e8392a',
+        iconText: 'TT',
+      },
+      {
+        id: 'thanhnien',
+        name: 'Thanh Niên',
+        category: 'Vietnam',
+        url: 'https://thanhnien.vn/rss/home.rss',
+        iconBg: '#005baa',
+        iconText: 'TN',
+      },
+      {
+        id: 'nhk-jp',
+        name: 'NHK ニュース',
+        category: '日本語',
+        url: 'https://www3.nhk.or.jp/rss/news/cat0.xml',
+        iconBg: '#003087',
+        iconText: 'NHK',
+      },
+      {
+        id: 'asahi',
+        name: '朝日新聞',
+        category: '日本語',
+        url: 'https://www.asahi.com/rss/asahi/newsheadlines.rdf',
+        iconBg: '#c00',
+        iconText: '朝日',
+      },
+      {
+        id: 'yomiuri',
+        name: '読売新聞',
+        category: '日本語',
+        url: 'https://www.yomiuri.co.jp/feed/',
+        iconBg: '#003d7a',
+        iconText: '読売',
+      },
+      {
+        id: 'mainichi',
+        name: '毎日新聞',
+        category: '日本語',
+        url: 'https://mainichi.jp/rss/etc/mainichi-flash.rss',
+        iconBg: '#d60000',
+        iconText: '毎日',
+      },
+      {
+        id: 'itmedia',
+        name: 'ITmedia',
+        category: '日本語',
+        url: 'https://rss.itmedia.co.jp/rss/2.0/itmedia_all.xml',
+        iconBg: '#0066cc',
+        iconText: 'IT',
+      },
+      {
+        id: 'gigazine',
+        name: 'GIGAZINE',
+        category: '日本語',
+        url: 'https://gigazine.net/news/rss_2.0/',
+        iconBg: '#ff6600',
+        iconText: 'GGZ',
+      },
+      {
+        id: 'wired',
+        name: 'Wired',
+        category: 'Tech',
+        url: 'https://www.wired.com/feed/rss',
+        iconBg: '#111111',
+        iconText: 'WRD',
+      },
+      {
+        id: 'theverge',
+        name: 'The Verge',
+        category: 'Tech',
+        url: 'https://www.theverge.com/rss/index.xml',
+        iconBg: '#fa4b2a',
+        iconText: 'VRG',
+      },
+      {
+        id: 'arstechnica',
+        name: 'Ars Technica',
+        category: 'Tech',
+        url: 'https://feeds.arstechnica.com/arstechnica/index',
+        iconBg: '#ff6600',
+        iconText: 'ARS',
+      },
+      {
+        id: 'engadget',
+        name: 'Engadget',
+        category: 'Tech',
+        url: 'https://www.engadget.com/rss.xml',
+        iconBg: '#00b4d8',
+        iconText: 'ENG',
+      },
+      {
+        id: 'mit-tech',
+        name: 'MIT Tech Review',
+        category: 'Tech',
+        url: 'https://www.technologyreview.com/stories.rss',
+        iconBg: '#8b0000',
+        iconText: 'MIT',
+      },
+    ];
+
+    const API_BASE = 'https://api.rss2json.com/v1/api.json?rss_url=';
+    const DEFAULT_SOURCE = 'bbc';
+    const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+    /* --------------------------------------------------
+       STATE
+    -------------------------------------------------- */
+    const state = {
+      currentSourceId: null,
+      articles: [],         // full list from last fetch
+      filteredArticles: [], // after search
+      searchQuery: '',
+      isDark: false,
+      cache: {},            // { [sourceId]: { data, timestamp } }
+    };
+
+    /* --------------------------------------------------
+       DOM REFS
+    -------------------------------------------------- */
+    const $  = (sel) => document.querySelector(sel);
+    const $$ = (sel) => document.querySelectorAll(sel);
+
+    const dom = {
+      sidebar:          $('#sidebar'),
+      sidebarOverlay:   $('#sidebar-overlay'),
+      sourcesList:      $('#sources-list'),
+      menuToggle:       $('#menu-toggle'),
+      themeToggle:      $('#theme-toggle'),
+      topbarSourceName: $('#topbar-source-name'),
+      articleCount:     $('#article-count'),
+      searchInput:      $('#search-input'),
+      clearSearch:      $('#clear-search'),
+      refreshBtn:       $('#refresh-btn'),
+      skeletonGrid:     $('#skeleton-grid'),
+      errorState:       $('#error-state'),
+      errorMessage:     $('#error-message'),
+      retryBtn:         $('#retry-btn'),
+      emptyState:       $('#empty-state'),
+      emptyTitle:       $('#empty-title'),
+      emptySubtitle:    $('#empty-subtitle'),
+      articlesGrid:     $('#articles-grid'),
+      backToTop:        $('#back-to-top'),
+    };
+
+    /* --------------------------------------------------
+       THEME
+    -------------------------------------------------- */
+    function applyTheme(dark) {
+      state.isDark = dark;
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      dom.themeToggle.classList.toggle('dark', dark);
+      dom.themeToggle.setAttribute('aria-checked', String(dark));
+      try { localStorage.setItem('cf_theme', dark ? 'dark' : 'light'); } catch (_) {}
+    }
+
+    function initTheme() {
+      let saved;
+      try { saved = localStorage.getItem('cf_theme'); } catch (_) {}
+      if (saved === 'dark') {
+        applyTheme(true);
+      } else if (saved === 'light') {
+        applyTheme(false);
+      } else {
+        applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
+      }
+    }
+
+    dom.themeToggle.addEventListener('click', () => applyTheme(!state.isDark));
+
+    /* --------------------------------------------------
+       SIDEBAR
+    -------------------------------------------------- */
+    function buildSidebar() {
+      const fragment = document.createDocumentFragment();
+      SOURCES.forEach((src) => {
+        const li = document.createElement('li');
+        li.className = 'source-item';
+        li.innerHTML = `
+          <button
+            class="source-btn"
+            data-id="${src.id}"
+            aria-label="Load ${src.name} feed"
+          >
+            <span class="source-icon" style="background:${src.iconBg};color:#ffffff;">${src.iconText}</span>
+            <span class="source-name">${src.name}</span>
+            <span class="source-category">${src.category}</span>
+          </button>
+        `;
+        fragment.appendChild(li);
+      });
+      dom.sourcesList.appendChild(fragment);
+
+      dom.sourcesList.addEventListener('click', (e) => {
+        const btn = e.target.closest('.source-btn');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        if (id === state.currentSourceId) return;
+        loadSource(id);
+        closeSidebar();
+      });
+    }
+
+    function setActiveSource(id) {
+      $$('.source-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.id === id);
+      });
+    }
+
+    function setSourceLoading(id, loading) {
+      const btn = $(`.source-btn[data-id="${id}"]`);
+      if (!btn) return;
+      btn.classList.toggle('loading-source', loading);
+    }
+
+    /* Mobile sidebar */
+    function openSidebar() {
+      dom.sidebar.classList.add('open');
+      dom.sidebarOverlay.classList.add('visible');
+      dom.menuToggle.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeSidebar() {
+      dom.sidebar.classList.remove('open');
+      dom.sidebarOverlay.classList.remove('visible');
+      dom.menuToggle.setAttribute('aria-expanded', 'false');
+    }
+
+    dom.menuToggle.addEventListener('click', () => {
+      if (dom.sidebar.classList.contains('open')) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    });
+
+    dom.sidebarOverlay.addEventListener('click', closeSidebar);
+
+    /* --------------------------------------------------
+       FETCH FEED
+    -------------------------------------------------- */
+    async function fetchFeed(sourceId, bypassCache = false) {
+      const source = SOURCES.find((s) => s.id === sourceId);
+      if (!source) throw new Error(`Unknown source: ${sourceId}`);
+
+      // Cache check
+      if (!bypassCache && state.cache[sourceId]) {
+        const { data, timestamp } = state.cache[sourceId];
+        if (Date.now() - timestamp < CACHE_TTL_MS) {
+          return data;
+        }
+      }
+
+      const url = API_BASE + encodeURIComponent(source.url);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const json = await response.json();
+
+        if (json.status !== 'ok') {
+          throw new Error(json.message || 'Feed conversion failed');
+        }
+
+        // Normalise articles
+        const articles = (json.items || []).map((item) => ({
+          title:       stripHtml(item.title || 'Untitled'),
+          link:        item.link || item.guid || '#',
+          pubDate:     item.pubDate || item.published || '',
+          description: stripHtml(item.description || item.content || item.summary || ''),
+          thumbnail:   item.thumbnail || item.enclosure?.link || null,
+          author:      item.author || '',
+          sourceName:  source.name,
+          sourceId:    source.id,
+        }));
+
+        const result = { articles, feed: json.feed };
+        state.cache[sourceId] = { data: result, timestamp: Date.now() };
+        return result;
+      } catch (err) {
+        clearTimeout(timeout);
+        if (err.name === 'AbortError') throw new Error('Request timed out (15 s). Check your connection.');
+        throw err;
+      }
+    }
+
+    /* --------------------------------------------------
+       LOAD SOURCE
+    -------------------------------------------------- */
+    async function loadSource(id, bypassCache = false) {
+      const source = SOURCES.find((s) => s.id === id);
+      if (!source) return;
+
+      state.currentSourceId = id;
+
+      // Reset search
+      if (!bypassCache) {
+        state.searchQuery = '';
+        dom.searchInput.value = '';
+        dom.clearSearch.classList.remove('visible');
+      }
+
+      setActiveSource(id);
+      setSourceLoading(id, true);
+      dom.topbarSourceName.textContent = source.name;
+      dom.articleCount.textContent = '';
+
+      // Show skeleton
+      showState('skeleton');
+
+      // Refresh button spin
+      dom.refreshBtn.classList.add('spinning');
+
+      try {
+        const { articles } = await fetchFeed(id, bypassCache);
+        state.articles = articles;
+        applySearch();
+      } catch (err) {
+        console.error('[Claude Feeds]', err);
+        showError(err.message);
+      } finally {
+        setSourceLoading(id, false);
+        dom.refreshBtn.classList.remove('spinning');
+      }
+    }
+
+    /* --------------------------------------------------
+       SEARCH / FILTER
+    -------------------------------------------------- */
+    function applySearch() {
+      const q = state.searchQuery.trim().toLowerCase();
+      if (!q) {
+        state.filteredArticles = state.articles;
+      } else {
+        state.filteredArticles = state.articles.filter((a) => {
+          return (
+            a.title.toLowerCase().includes(q) ||
+            a.description.toLowerCase().includes(q) ||
+            a.sourceName.toLowerCase().includes(q)
+          );
+        });
+      }
+      renderArticles();
+    }
+
+    let searchDebounce = null;
+    dom.searchInput.addEventListener('input', () => {
+      const val = dom.searchInput.value;
+      state.searchQuery = val;
+      dom.clearSearch.classList.toggle('visible', val.length > 0);
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(() => {
+        if (state.articles.length > 0) applySearch();
+      }, 220);
+    });
+
+    dom.clearSearch.addEventListener('click', () => {
+      dom.searchInput.value = '';
+      state.searchQuery = '';
+      dom.clearSearch.classList.remove('visible');
+      if (state.articles.length > 0) applySearch();
+      dom.searchInput.focus();
+    });
+
+    /* --------------------------------------------------
+       RENDER ARTICLES
+    -------------------------------------------------- */
+    function renderArticles() {
+      const articles = state.filteredArticles;
+      const q = state.searchQuery.trim().toLowerCase();
+
+      if (articles.length === 0) {
+        if (q) {
+          showState('empty');
+          dom.emptyTitle.textContent = 'No results found';
+          dom.emptySubtitle.textContent = `No articles match "${state.searchQuery}". Try a different keyword.`;
+        } else {
+          showState('empty');
+          dom.emptyTitle.textContent = 'No articles available';
+          dom.emptySubtitle.textContent = 'This feed appears to be empty right now.';
+        }
+        dom.articleCount.textContent = '';
+        return;
+      }
+
+      // Article count
+      const total = state.articles.length;
+      const shown = articles.length;
+      if (q) {
+        dom.articleCount.textContent = `${shown} of ${total} article${total !== 1 ? 's' : ''} matching "${state.searchQuery}"`;
+      } else {
+        dom.articleCount.textContent = `${total} article${total !== 1 ? 's' : ''}`;
+      }
+
+      // Render cards
+      dom.articlesGrid.innerHTML = '';
+      const frag = document.createDocumentFragment();
+
+      articles.forEach((article, i) => {
+        const card = createArticleCard(article, q, i);
+        frag.appendChild(card);
+      });
+
+      dom.articlesGrid.appendChild(frag);
+      showState('articles');
+    }
+
+    function createArticleCard(article, query, index) {
+      const div = document.createElement('article');
+      div.className = 'article-card';
+      div.setAttribute('role', 'listitem');
+
+      const titleHtml  = query ? highlight(escapeHtml(article.title), query)       : escapeHtml(article.title);
+      const descHtml   = query ? highlight(escapeHtml(article.description), query)  : escapeHtml(article.description);
+      const dateStr    = formatDate(article.pubDate);
+
+      const source = SOURCES.find((s) => s.id === article.sourceId);
+      const iconBg   = source ? source.iconBg   : '#1d4ed8';
+      const iconText = source ? source.iconText : article.sourceName.slice(0, 3).toUpperCase();
+
+      let imageHtml = '';
+      if (article.thumbnail && isValidImageUrl(article.thumbnail)) {
+        imageHtml = `<img class="card-image" src="${escapeAttr(article.thumbnail)}" alt="" loading="lazy" onerror="this.style.display='none'">`;
+      }
+
+      div.innerHTML = `
+        ${imageHtml}
+        <div class="card-body">
+          <div class="card-meta">
+            <span class="source-tag" style="background:${iconBg}22;color:${iconBg};">
+              ${escapeHtml(article.sourceName)}
+            </span>
+            ${dateStr ? `
+            <span class="card-date" aria-label="Published ${dateStr}">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              ${dateStr}
+            </span>` : ''}
+          </div>
+          <h2 class="card-title">${titleHtml}</h2>
+          ${article.description ? `<p class="card-description">${descHtml}</p>` : ''}
+        </div>
+        ${article.link && article.link !== '#' ? `
+        <div class="card-footer">
+          <a class="read-more-link" href="${escapeAttr(article.link)}" target="_blank" rel="noopener noreferrer" aria-label="Read full article: ${escapeAttr(article.title)}">
+            Read article
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+              <polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </a>
+        </div>` : ''}
+      `;
+
+      return div;
+    }
+
+    /* --------------------------------------------------
+       UI STATE MANAGEMENT
+    -------------------------------------------------- */
+    function showState(which) {
+      // which: 'skeleton' | 'error' | 'empty' | 'articles'
+      dom.skeletonGrid.classList.toggle('visible',  which === 'skeleton');
+      dom.errorState.classList.toggle('visible',    which === 'error');
+      dom.emptyState.classList.toggle('visible',    which === 'empty');
+      dom.articlesGrid.classList.toggle('visible',  which === 'articles');
+    }
+
+    function showError(message) {
+      dom.errorMessage.textContent = message || 'An unexpected error occurred. Please try again.';
+      showState('error');
+    }
+
+    /* --------------------------------------------------
+       RETRY / REFRESH
+    -------------------------------------------------- */
+    dom.retryBtn.addEventListener('click', () => {
+      if (state.currentSourceId) {
+        loadSource(state.currentSourceId, true);
+      }
+    });
+
+    dom.refreshBtn.addEventListener('click', () => {
+      if (state.currentSourceId) {
+        loadSource(state.currentSourceId, true);
+      }
+    });
+
+    /* --------------------------------------------------
+       BACK TO TOP
+    -------------------------------------------------- */
+    window.addEventListener('scroll', () => {
+      dom.backToTop.classList.toggle('visible', window.scrollY > 400);
+    }, { passive: true });
+
+    dom.backToTop.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    /* --------------------------------------------------
+       UTILITIES
+    -------------------------------------------------- */
+
+    /** Strip HTML tags from a string */
+    function stripHtml(html) {
+      if (!html) return '';
+      // Use a temporary div to decode HTML entities and strip tags
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html
+        .replace(/<br\s*\/?>/gi, ' ')
+        .replace(/<\/p>/gi, ' ')
+        .replace(/<[^>]+>/g, '');
+      return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+    }
+
+    /** Escape HTML entities */
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    /** Escape attribute values */
+    function escapeAttr(str) {
+      return String(str || '').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    /** Highlight query in string (already HTML-escaped) */
+    function highlight(escapedStr, query) {
+      if (!query) return escapedStr;
+      const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(`(${escaped})`, 'gi');
+      return escapedStr.replace(re, '<mark class="highlight">$1</mark>');
+    }
+
+    /** Format a date string to a readable form */
+    function formatDate(str) {
+      if (!str) return '';
+      try {
+        const d = new Date(str);
+        if (isNaN(d.getTime())) return '';
+        const now  = new Date();
+        const diff = Math.floor((now - d) / 1000); // seconds
+
+        if (diff < 60)         return 'Just now';
+        if (diff < 3600)       return `${Math.floor(diff / 60)}m ago`;
+        if (diff < 86400)      return `${Math.floor(diff / 3600)}h ago`;
+        if (diff < 86400 * 7)  return `${Math.floor(diff / 86400)}d ago`;
+
+        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      } catch (_) {
+        return '';
+      }
+    }
+
+    /** Validate image URL (avoid data URIs, javascript: etc.) */
+    function isValidImageUrl(url) {
+      if (!url || typeof url !== 'string') return false;
+      return /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg|avif)(\?.*)?$/i.test(url) ||
+             /^https?:\/\/.+(\/image\/|\/img\/|\/photo\/|thumbnail|picture)/i.test(url);
+    }
+
+    /* --------------------------------------------------
+       KEYBOARD
+    -------------------------------------------------- */
+    document.addEventListener('keydown', (e) => {
+      // Ctrl/Cmd + K → focus search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        dom.searchInput.focus();
+        dom.searchInput.select();
+      }
+      // Escape → clear search or close sidebar
+      if (e.key === 'Escape') {
+        if (dom.sidebar.classList.contains('open')) {
+          closeSidebar();
+        } else if (state.searchQuery) {
+          dom.searchInput.value = '';
+          state.searchQuery = '';
+          dom.clearSearch.classList.remove('visible');
+          if (state.articles.length > 0) applySearch();
+        }
+      }
+    });
+
+    /* --------------------------------------------------
+       INIT
+    -------------------------------------------------- */
+    function init() {
+      initTheme();
+      buildSidebar();
+      loadSource(DEFAULT_SOURCE);
+
+      // Update relative timestamps every minute
+      setInterval(() => {
+        if (state.filteredArticles.length > 0 && !state.searchQuery) {
+          // Only re-render dates, not whole grid
+          $$('.card-date').forEach((el) => {
+            const label = el.getAttribute('aria-label') || '';
+            // Nothing to do here without storing raw dates — skip for simplicity
+          });
+        }
+      }, 60 * 1000);
+    }
+
+    // Wait for DOM to be ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>
