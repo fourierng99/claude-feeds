@@ -312,6 +312,16 @@
       opacity: 0.7;
     }
 
+    .source-group-label {
+      padding: 14px 20px 4px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--sidebar-text-muted);
+      opacity: 0.6;
+    }
+
     .source-btn.active .source-category {
       color: rgba(255,255,255,0.65);
     }
@@ -1245,12 +1255,12 @@
         iconText: 'BBC',
       },
       {
-        id: 'reuters',
-        name: 'Reuters',
+        id: 'aljazeera',
+        name: 'Al Jazeera',
         category: 'World',
-        url: 'https://feeds.reuters.com/reuters/topNews',
-        iconBg: '#ff6200',
-        iconText: 'R',
+        url: 'https://www.aljazeera.com/xml/rss/all.xml',
+        iconBg: '#c8a000',
+        iconText: 'AJ',
       },
       {
         id: 'guardian',
@@ -1259,14 +1269,6 @@
         url: 'https://www.theguardian.com/world/rss',
         iconBg: '#052962',
         iconText: 'GRD',
-      },
-      {
-        id: 'aljazeera',
-        name: 'Al Jazeera',
-        category: 'World',
-        url: 'https://www.aljazeera.com/xml/rss/all.xml',
-        iconBg: '#8b0000',
-        iconText: 'AJ',
       },
       {
         id: 'techcrunch',
@@ -1428,6 +1430,22 @@
         iconBg: '#8b0000',
         iconText: 'MIT',
       },
+      {
+        id: 'vnexpress-finance',
+        name: 'VnExpress Kinh Doanh',
+        category: 'Finance',
+        url: 'https://vnexpress.net/rss/kinh-doanh.rss',
+        iconBg: '#da251d',
+        iconText: 'VNE',
+      },
+      {
+        id: 'marketwatch',
+        name: 'MarketWatch',
+        category: 'Finance',
+        url: 'https://feeds.marketwatch.com/marketwatch/topstories/',
+        iconBg: '#1a1a1a',
+        iconText: 'MW',
+      },
     ];
 
     const API_BASE = 'https://api.rss2json.com/v1/api.json?rss_url=';
@@ -1504,22 +1522,37 @@
     -------------------------------------------------- */
     function buildSidebar() {
       const fragment = document.createDocumentFragment();
+
+      // Group sources by category (preserve insertion order)
+      const groups = {};
       SOURCES.forEach((src) => {
-        const li = document.createElement('li');
-        li.className = 'source-item';
-        li.innerHTML = `
-          <button
-            class="source-btn"
-            data-id="${src.id}"
-            aria-label="Load ${src.name} feed"
-          >
-            <span class="source-icon" style="background:${src.iconBg};color:#ffffff;">${src.iconText}</span>
-            <span class="source-name">${src.name}</span>
-            <span class="source-category">${src.category}</span>
-          </button>
-        `;
-        fragment.appendChild(li);
+        if (!groups[src.category]) groups[src.category] = [];
+        groups[src.category].push(src);
       });
+
+      Object.entries(groups).forEach(([category, sources]) => {
+        const label = document.createElement('li');
+        label.className = 'source-group-label';
+        label.textContent = category;
+        fragment.appendChild(label);
+
+        sources.forEach((src) => {
+          const li = document.createElement('li');
+          li.className = 'source-item';
+          li.innerHTML = `
+            <button
+              class="source-btn"
+              data-id="${src.id}"
+              aria-label="Load ${src.name} feed"
+            >
+              <span class="source-icon" style="background:${src.iconBg};color:#ffffff;">${src.iconText}</span>
+              <span class="source-name">${src.name}</span>
+            </button>
+          `;
+          fragment.appendChild(li);
+        });
+      });
+
       dom.sourcesList.appendChild(fragment);
 
       dom.sourcesList.addEventListener('click', (e) => {
